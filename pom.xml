@@ -193,6 +193,10 @@
             <name>Minecraft Libraries</name>
             <url>https://libraries.minecraft.net</url>
         </repository>
+        <repository>
+            <id>folia-repo</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
     </repositories>
 
 </project>

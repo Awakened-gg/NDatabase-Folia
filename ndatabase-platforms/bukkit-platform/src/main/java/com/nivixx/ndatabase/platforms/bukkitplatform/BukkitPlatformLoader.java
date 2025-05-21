@@ -14,7 +14,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
 /**
- * For Spigot/Bukkit based servers
+ * For Spigot/Bukkit/Folia based servers
  */
 public class BukkitPlatformLoader extends PlatformLoader {
 
@@ -25,7 +25,7 @@ public class BukkitPlatformLoader extends PlatformLoader {
 
     @Override
     public SyncExecutor supplySyncExecutor() {
-        return new BukkitSyncExecutor();
+        return new BukkitSyncExecutor(NDatabasePlugin.getInstance());
     }
 
     @Override
