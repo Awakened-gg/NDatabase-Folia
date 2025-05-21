@@ -1,55 +1,43 @@
 package com.nivixx.ndatabase.platforms.bukkitplatform;
 
 import com.nivixx.ndatabase.platforms.coreplatform.executor.SyncExecutor;
-import org.bukkit.Bukkit;
+import com.tcoded.folialib.FoliaLib;
+import com.tcoded.folialib.wrapper.task.WrappedTask;
 
-import java.lang.reflect.Method;
+import java.util.function.Consumer;
 
 public class BukkitSyncExecutor implements SyncExecutor {
     
     private final NDatabasePlugin plugin;
-    private final boolean isFolia;
-    private Object globalRegionScheduler;
+    private final FoliaLib foliaLib;
     
     public BukkitSyncExecutor(NDatabasePlugin plugin) {
         this.plugin = plugin;
-        this.isFolia = checkFolia();
-        
-        if (isFolia) {
-            try {
-                Method getGlobalRegionScheduler = plugin.getServer().getClass().getMethod("getGlobalRegionScheduler");
-                this.globalRegionScheduler = getGlobalRegionScheduler.invoke(plugin.getServer());
-            } catch (Exception e) {
-                plugin.getLogger().warning("Failed to get global region scheduler, falling back to Bukkit scheduler");
-                this.globalRegionScheduler = null;
-            }
-        }
-    }
-    
-    private boolean checkFolia() {
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        this.foliaLib = new FoliaLib(plugin);
     }
     
     @Override
     public void runSync(Runnable runnable) {
-        if (isFolia && globalRegionScheduler != null) {
+        try {
+            // FoliaLib handles both Bukkit and Folia platforms automatically
+            // Using runNextTick with the correct Consumer<WrappedTask> signature
+            foliaLib.getScheduler().runNextTick(task -> {
+                try {
+                    runnable.run();
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Error while executing sync task: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            });
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error scheduling sync task: " + e.getMessage());
+            // Attempt to run directly if scheduling fails
             try {
-                // Get the execute method: void execute(Plugin plugin, Runnable runnable)
-                Method executeMethod = globalRegionScheduler.getClass().getMethod("execute", plugin.getClass().getInterfaces()[0], Runnable.class);
-                executeMethod.invoke(globalRegionScheduler, plugin, runnable);
-            } catch (Exception e) {
-                // Fallback to Bukkit scheduler if reflection fails
-                plugin.getLogger().warning("Failed to use Folia scheduler, falling back to Bukkit scheduler");
-                Bukkit.getScheduler().runTask(plugin, runnable);
+                runnable.run();
+            } catch (Exception ex) {
+                plugin.getLogger().severe("Failed to execute sync task directly: " + ex.getMessage());
+                ex.printStackTrace();
             }
-        } else {
-            // Standard Bukkit/Paper implementation
-            Bukkit.getScheduler().runTask(plugin, runnable);
         }
     }
 }
